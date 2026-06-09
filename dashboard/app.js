@@ -1,8 +1,8 @@
 const files = {
-  repos: "data/repo-summary.csv",
-  depth: "data/depth-histogram.csv",
-  findings: "data/unique-findings.csv",
-  osvs: "data/osvs-classified.csv"
+  repos: "../data/repo-summary.csv",
+  depth: "../data/depth-histogram.csv",
+  findings: "../data/unique-findings.csv",
+  osvs: "../data/osvs-classified.csv"
 };
 
 const colors = {
