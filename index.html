@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard BI | Vulnerabilidades Transitivas em Go</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Medição e Experimentação | Business Intelligence</p>
+        <h1>Vulnerabilidades em Dependências Transitivas em Projetos Go</h1>
+        <p class="lead">
+          Análise interativa de prevalência, persistência e impacto de vulnerabilidades
+          em grafos de dependência de repositórios Go populares no GitHub.
+        </p>
+      </div>
+      <div class="source-box">
+        <span>Fonte</span>
+        <strong>CSVs em <code>data/</code></strong>
+        <small>Relatório usado como base narrativa e definição das métricas.</small>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpi-grid" id="kpis" aria-label="Indicadores principais"></section>
+
+      <section class="panel filters" aria-label="Filtros do dashboard">
+        <div>
+          <h2>Exploração do Dataset</h2>
+          <p>
+            Use os filtros para comparar subgrupos. Os indicadores e visualizações são
+            recalculados automaticamente.
+          </p>
+        </div>
+        <label>
+          Buscar repositório
+          <input id="repoSearch" type="search" placeholder="ex.: kubernetes, helm, docker" />
+        </label>
+        <label>
+          Segmento de risco
+          <select id="riskFilter">
+            <option value="all">Todos</option>
+            <option value="high">Alta densidade transitiva (>= 50%)</option>
+            <option value="medium">Densidade moderada (20% a 49%)</option>
+            <option value="low">Baixa densidade (&lt; 20%)</option>
+            <option value="none">Sem vulnerabilidade transitiva</option>
+          </select>
+        </label>
+        <label>
+          Mínimo de vulnerabilidades transitivas
+          <input id="minTransitive" type="range" min="0" max="250" value="0" />
+          <span id="minTransitiveLabel">0</span>
+        </label>
+      </section>
+
+      <section class="section-band">
+        <div class="section-heading">
+          <p class="eyebrow">1. Caracterização do Dataset</p>
+          <h2>Quem compõe a amostra?</h2>
+          <p>
+            A caracterização apresenta o volume de repositórios analisados, a superfície
+            de dependências e a distribuição de vulnerabilidades no grafo.
+          </p>
+        </div>
+        <div class="grid two">
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Distribuição por dependências transitivas</h3>
+                <p>Quantidade de repositórios por faixa de dependências transitivas.</p>
+              </div>
+            </div>
+            <div id="depsHistogram" class="chart"></div>
+          </article>
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Composição das vulnerabilidades</h3>
+                <p>Diretas, transitivas estritas e indiretas promovidas pelo MVS.</p>
+              </div>
+            </div>
+            <div id="compositionChart" class="chart compact"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-band">
+        <div class="section-heading">
+          <p class="eyebrow">2. Questões de Pesquisa</p>
+          <h2>Q1 - Quão comuns são as vulnerabilidades transitivas?</h2>
+          <p>
+            A resposta combina prevalência por repositório e densidade transitiva dentro
+            dos achados presentes no grafo de dependências.
+          </p>
+        </div>
+        <div class="grid two">
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Projetos com vulnerabilidade transitiva</h3>
+                <p>Comparação entre repositórios afetados e não afetados.</p>
+              </div>
+            </div>
+            <div id="prevalenceChart" class="chart compact"></div>
+          </article>
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Repositórios mais afetados</h3>
+                <p>Top 10 por vulnerabilidades true transitive.</p>
+              </div>
+            </div>
+            <div id="topReposChart" class="chart"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-band">
+        <div class="section-heading">
+          <h2>Q2 - Qual é a persistência das vulnerabilidades?</h2>
+          <p>
+            Como o snapshot mostra vulnerabilidades ainda presentes, a idade desde a
+            publicação funciona como proxy de débito de segurança.
+          </p>
+        </div>
+        <div class="grid two">
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Idade das vulnerabilidades</h3>
+                <p>Distribuição por buckets de dias desde a publicação.</p>
+              </div>
+            </div>
+            <div id="ageBucketsChart" class="chart"></div>
+          </article>
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Débito por repositório</h3>
+                <p>Mediana de idade das vulnerabilidades nos projetos mais persistentes.</p>
+              </div>
+            </div>
+            <div id="debtReposChart" class="chart"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-band">
+        <div class="section-heading">
+          <h2>Q3 - Existe correlação entre dependências e vulnerabilidades transitivas?</h2>
+          <p>
+            O relatório indica que, em Go, o volume de dependências transitivas é mais
+            informativo que a profundidade do grafo, pois o MVS tende a achatar a árvore.
+          </p>
+        </div>
+        <div class="grid two">
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Dependências transitivas x vulnerabilidades</h3>
+                <p>Dispersão por repositório, com correlação de Pearson e Spearman.</p>
+              </div>
+              <strong id="corrBadge" class="badge">Calculando...</strong>
+            </div>
+            <div id="scatterChart" class="chart"></div>
+          </article>
+          <article class="panel">
+            <div class="chart-head">
+              <div>
+                <h3>Vulnerabilidades por profundidade</h3>
+                <p>Distribuição agregada por depth no grafo de dependências.</p>
+              </div>
+            </div>
+            <div id="depthChart" class="chart"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-band">
+        <div class="section-heading">
+          <p class="eyebrow">Detalhamento</p>
+          <h2>Repositórios analisados</h2>
+          <p>Ordenados por maior volume de vulnerabilidades transitivas no recorte filtrado.</p>
+        </div>
+        <div class="panel table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Repositório</th>
+                <th>In graph</th>
+                <th>True transitive</th>
+                <th>Densidade</th>
+                <th>Deps transitivas</th>
+                <th>Mediana idade</th>
+                <th>Max depth</th>
+              </tr>
+            </thead>
+            <tbody id="repoTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div id="tooltip" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
