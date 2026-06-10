@@ -182,24 +182,31 @@
         <div class="section-heading">
           <p class="eyebrow">Detalhamento</p>
           <h2>Repositórios analisados</h2>
-          <p>Ordenados por maior volume de vulnerabilidades transitivas no recorte filtrado.</p>
+          <p>
+            Compare múltiplas dimensões de risco ao mesmo tempo. Cada linha representa
+            um repositório e cruza métricas normalizadas entre 0 e 100.
+          </p>
         </div>
-        <div class="panel table-panel">
-          <table>
-            <thead>
-              <tr>
-                <th>Repositório</th>
-                <th>In graph</th>
-                <th>True transitive</th>
-                <th>Densidade</th>
-                <th>Deps transitivas</th>
-                <th>Mediana idade</th>
-                <th>Max depth</th>
-              </tr>
-            </thead>
-            <tbody id="repoTable"></tbody>
-          </table>
-        </div>
+        <article class="panel">
+          <div class="chart-head">
+            <div>
+              <h3>Perfil multidimensional dos repositórios</h3>
+              <p>Coordenadas paralelas com destaque para os projetos de maior risco.</p>
+            </div>
+            <div class="control-row">
+              <label class="inline-control">
+                Ordenar destaque por
+                <select id="multidimSort">
+                  <option value="true_transitive">Vulns true transitive</option>
+                  <option value="transitive_density_strict_pct">Densidade transitiva</option>
+                  <option value="deps_transitive">Deps transitivas</option>
+                  <option value="median_vuln_age_days">Mediana do débito</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div id="repoMultidimChart" class="chart multidim-chart"></div>
+        </article>
       </section>
     </main>
 

@@ -105,17 +105,17 @@ main {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(160px, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(5, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
 .kpi {
-  min-height: 132px;
-  padding: 18px;
+  min-height: 166px;
+  padding: 24px;
   background: #ffffff;
   border: 1px solid var(--line);
-  border-left: 5px solid var(--blue);
+  border-left: 7px solid var(--blue);
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
@@ -138,20 +138,21 @@ main {
 
 .kpi span {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .kpi strong {
   display: block;
-  margin: 10px 0 6px;
-  font-size: clamp(1.7rem, 3vw, 2.65rem);
+  margin: 14px 0 10px;
+  font-size: clamp(2.45rem, 4.4vw, 4.15rem);
   line-height: 1;
 }
 
 .kpi small {
   color: var(--muted);
+  font-size: 0.95rem;
   line-height: 1.35;
 }
 
@@ -236,10 +237,25 @@ input[type="range"] {
   font-size: 0.78rem;
 }
 
+.inline-control {
+  min-width: 230px;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .chart {
   position: relative;
   width: 100%;
   min-height: 350px;
+}
+
+.multidim-chart {
+  min-height: 470px;
 }
 
 .chart.compact {
@@ -279,6 +295,61 @@ svg {
 
 .dot {
   cursor: pointer;
+}
+
+.focus-dot {
+  cursor: pointer;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.focus-dot:hover {
+  opacity: 0.82;
+}
+
+.point-label,
+.axis-label {
+  fill: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.axis-value {
+  fill: var(--muted);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.dimension-line {
+  stroke: #a8b4bf;
+  stroke-width: 1;
+}
+
+.repo-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: opacity 160ms ease, stroke-width 160ms ease;
+}
+
+.repo-line:hover {
+  opacity: 1;
+  stroke-width: 4;
+}
+
+.repo-label {
+  fill: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.leader-line {
+  stroke: #9aa8b5;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.75;
 }
 
 .table-panel {

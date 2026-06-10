@@ -25,7 +25,8 @@ const state = {
     search: "",
     risk: "all",
     minTransitive: 0
-  }
+  },
+  multidimSort: "true_transitive"
 };
 
 const tooltip = document.getElementById("tooltip");
@@ -304,6 +305,172 @@ function drawScatter(id, rows) {
   axisText(svg, "True transitive vulns", 14, margin.top + innerH / 2, "middle").setAttribute("transform", `rotate(-90 14 ${margin.top + innerH / 2})`);
 }
 
+function metricLabel(metric) {
+  const labels = {
+    true_transitive: "vulnerabilidades true transitive",
+    in_graph: "vulnerabilidades in graph",
+    deps_transitive: "dependências transitivas",
+    total_modules_in_graph: "módulos no grafo",
+    median_vuln_age_days: "dias de mediana do débito",
+    transitive_density_strict_pct: "densidade transitiva",
+    avg_inertia_tags: "inércia média"
+  };
+  return labels[metric] || metric;
+}
+
+function shortRepoName(repo) {
+  const name = repo.split("/").pop() || repo;
+  return name.length > 12 ? `${name.slice(0, 11)}...` : name;
+}
+
+function drawMultidimChart(id, rows, sortKey) {
+  const container = clear(id);
+  const dimensions = [
+    { key: "deps_transitive", label: "Deps trans." },
+    { key: "total_modules_in_graph", label: "Módulos" },
+    { key: "in_graph", label: "Vulns graph" },
+    { key: "true_transitive", label: "True trans." },
+    { key: "transitive_density_strict_pct", label: "Densidade" },
+    { key: "median_vuln_age_days", label: "Débito" }
+  ];
+  const data = rows
+    .filter((row) => dimensions.some((dimension) => number(row[dimension.key]) > 0))
+    .slice()
+    .sort((a, b) => number(b[sortKey]) - number(a[sortKey]));
+
+  if (!data.length) return empty(container);
+
+  const { svg, width, height } = makeSvg(container, 980, 520);
+  const margin = { top: 58, right: 208, bottom: 94, left: 54 };
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+  const highlighted = new Set(data.slice(0, 16).map((row) => row.repo));
+  const backgroundRows = data.slice(16, 140);
+  const maxByDimension = Object.fromEntries(
+    dimensions.map((dimension) => [
+      dimension.key,
+      Math.max(...data.map((row) => number(row[dimension.key])), 1)
+    ])
+  );
+  const xFor = (index) => margin.left + (innerW * index) / (dimensions.length - 1);
+  const yFor = (row, dimension) => {
+    const normalized = number(row[dimension.key]) / maxByDimension[dimension.key];
+    return margin.top + innerH - normalized * innerH;
+  };
+  const colorFor = (row) => {
+    const density = number(row.transitive_density_strict_pct);
+    if (density >= 50) return colors.red;
+    if (density >= 20) return colors.amber;
+    if (density > 0) return colors.teal;
+    return colors.gray;
+  };
+  const linePath = (row) =>
+    dimensions
+      .map((dimension, index) => `${index === 0 ? "M" : "L"} ${xFor(index)} ${yFor(row, dimension)}`)
+      .join(" ");
+
+  const bg = svgEl("rect", {
+    x: margin.left,
+    y: margin.top,
+    width: innerW,
+    height: innerH,
+    fill: "#f8fafb",
+    stroke: colors.light,
+    rx: 8
+  });
+  svg.appendChild(bg);
+
+  for (let i = 0; i <= 4; i += 1) {
+    const y = margin.top + innerH - (innerH * i) / 4;
+    svg.appendChild(svgEl("line", { class: "grid-line", x1: margin.left, y1: y, x2: margin.left + innerW, y2: y }));
+    axisText(svg, `${i * 25}`, margin.left - 10, y + 4, "end");
+  }
+
+  dimensions.forEach((dimension, index) => {
+    const x = xFor(index);
+    svg.appendChild(svgEl("line", { class: "dimension-line", x1: x, y1: margin.top, x2: x, y2: margin.top + innerH }));
+    const label = svgEl("text", {
+      class: "axis-label",
+      x,
+      y: margin.top + innerH + 28,
+      "text-anchor": "end",
+      transform: `rotate(-28 ${x} ${margin.top + innerH + 28})`
+    });
+    label.textContent = dimension.label;
+    svg.appendChild(label);
+
+    const maxLabel = svgEl("text", { class: "axis-value", x, y: margin.top - 16, "text-anchor": "middle" });
+    maxLabel.textContent = format(maxByDimension[dimension.key]);
+    svg.appendChild(maxLabel);
+
+    const minLabel = svgEl("text", { class: "axis-value", x, y: margin.top + innerH + 14, "text-anchor": "middle" });
+    minLabel.textContent = "0";
+    svg.appendChild(minLabel);
+  });
+
+  axisText(svg, "Escala normalizada (%) por métrica | número acima de cada eixo = máximo do recorte", margin.left, 24, "start");
+
+  backgroundRows.forEach((row) => {
+    const path = svgEl("path", {
+      class: "repo-line",
+      d: linePath(row),
+      stroke: colorFor(row),
+      "stroke-width": 1.2,
+      opacity: 0.12
+    });
+    path.addEventListener("mousemove", (event) =>
+      showTip(event, `<strong>${row.repo}</strong><br>True transitive: ${format(number(row.true_transitive))}<br>Densidade: ${percent(number(row.transitive_density_strict_pct))}`)
+    );
+    path.addEventListener("mouseleave", hideTip);
+    svg.appendChild(path);
+  });
+
+  const highlightedRows = data.filter((row) => highlighted.has(row.repo));
+
+  highlightedRows.forEach((row) => {
+    const path = svgEl("path", {
+      class: "repo-line",
+      d: linePath(row),
+      stroke: colorFor(row),
+      "stroke-width": 2.6,
+      opacity: 0.82
+    });
+    path.addEventListener("mousemove", (event) =>
+      showTip(
+        event,
+        `<strong>${row.repo}</strong><br>Deps transitivas: ${format(number(row.deps_transitive))}<br>True transitive: ${format(number(row.true_transitive))}<br>Densidade: ${percent(number(row.transitive_density_strict_pct))}<br>Débito mediano: ${format(number(row.median_vuln_age_days))} dias`
+      )
+    );
+    path.addEventListener("mouseleave", hideTip);
+    svg.appendChild(path);
+  });
+
+  const endDimension = dimensions[dimensions.length - 1];
+  const labelRows = highlightedRows.slice(0, 10).sort((a, b) => yFor(a, endDimension) - yFor(b, endDimension));
+  const labelX = xFor(dimensions.length - 1) + 26;
+  const labelTop = margin.top + 10;
+  const labelGap = 26;
+
+  labelRows.forEach((row, index) => {
+    const sourceX = xFor(dimensions.length - 1);
+    const sourceY = yFor(row, endDimension);
+    const targetY = labelTop + index * labelGap;
+    const labelText = shortRepoName(row.repo);
+
+    svg.appendChild(svgEl("line", { class: "leader-line", x1: sourceX + 4, y1: sourceY, x2: labelX - 8, y2: targetY - 4 }));
+    svg.appendChild(svgEl("rect", { x: labelX - 4, y: targetY - 17, width: 104, height: 18, fill: "#ffffff", opacity: 0.88, rx: 3 }));
+
+    const label = svgEl("text", {
+      class: "repo-label",
+      x: labelX,
+      y: targetY - 4,
+      "text-anchor": "start"
+    });
+    label.textContent = labelText;
+    svg.appendChild(label);
+  });
+}
+
 function bucketDeps(rows) {
   const buckets = [
     { label: "0-99", min: 0, max: 99, value: 0 },
@@ -395,26 +562,6 @@ function renderKpis(rows) {
     .join("");
 }
 
-function renderTable(rows) {
-  const tbody = document.getElementById("repoTable");
-  tbody.innerHTML = rows
-    .slice()
-    .sort((a, b) => number(b.true_transitive) - number(a.true_transitive))
-    .slice(0, 25)
-    .map(
-      (row) => `<tr>
-        <td>${row.repo}</td>
-        <td>${format(number(row.in_graph))}</td>
-        <td>${format(number(row.true_transitive))}</td>
-        <td>${percent(number(row.transitive_density_strict_pct))}</td>
-        <td>${format(number(row.deps_transitive))}</td>
-        <td>${format(number(row.median_vuln_age_days))} d</td>
-        <td>${format(number(row.max_depth))}</td>
-      </tr>`
-    )
-    .join("");
-}
-
 function render() {
   const rows = filteredRepos();
   const repoNames = new Set(rows.map((row) => row.repo));
@@ -474,7 +621,7 @@ function render() {
   document.getElementById("corrBadge").textContent = `r ${pearson.toFixed(2)} | rho ${spearman.toFixed(2)}`;
 
   drawBarChart("depthChart", aggregateDepth(state.depth, repoNames), { horizontal: true });
-  renderTable(rows);
+  drawMultidimChart("repoMultidimChart", rows, state.multidimSort);
 }
 
 async function load() {
@@ -508,6 +655,11 @@ async function load() {
   slider.addEventListener("input", (event) => {
     state.filters.minTransitive = number(event.target.value);
     document.getElementById("minTransitiveLabel").textContent = format(state.filters.minTransitive);
+    render();
+  });
+
+  document.getElementById("multidimSort").addEventListener("change", (event) => {
+    state.multidimSort = event.target.value;
     render();
   });
 
